@@ -1,6 +1,6 @@
 ---
 title: "Soil Texture Analysis"
-author: "Ivan (Jia Sheng) Ee"
+author: "Ivan (Jia Sheng) Ee, Gavin McNicol"
 output: html_document
 date: "2024-11-07"
 ---
@@ -15,8 +15,8 @@ library("tidyverse")
 ```
 
 ```{r data-import}
-Soils <- read_excel("Soil_data.xlsx")
-wss_data <- read_excel("wss_data_table_for_crocus_2024.xlsx")
+Soils <- read_excel("../data/Soil_data.xlsx")
+wss_data <- read_excel("../data/wss_data_table_for_crocus_2024.xlsx")
 
 tibble(wss_data)
 ```
@@ -41,7 +41,7 @@ look at tidy soils dataset
 ```{r}
 tidy_soils 
 tidy_soils %>% 
-  write_csv("crocus-urban-soil-survey-v1.csv")
+  write_csv("../output/crocus-urban-soil-survey-v1.csv")
 ```
 
 
@@ -153,7 +153,7 @@ ggplot(data = neiu_testing_tbl_combined, aes(x = core_depth, y = Percentage, fil
     strip.text = element_text(size = 10)
   )
 
-ggsave("neiu_facet_plot.png", width = 12, height = 8)
+ggsave("../output/neiu_facet_plot.png", width = 12, height = 8)
 ```
 
 
@@ -237,7 +237,7 @@ ggplot(data = csu_tbl_combined, aes(x = core_depth, y = Percentage, fill = Compo
     strip.text = element_text(size = 10)
   )
 
-ggsave("csu_facet_plot.png", width = 12, height = 8)
+ggsave("../output/csu_facet_plot.png", width = 12, height = 8)
 ```
 
 
@@ -306,7 +306,7 @@ ggplot(data = soil_long_uic, aes(x = core_depth, y = Percentage, fill = Componen
   coord_flip() +
   theme_bw()
 
-ggsave("uic_facet_plot.png", width = 12, height = 8)
+ggsave("../output/uic_facet_plot.png", width = 12, height = 8)
 ```
 
 ```{r wss_uic core}
@@ -384,7 +384,7 @@ ggplot(data = uic_tbl_combined, aes(x = core_depth, y = Percentage, fill = Compo
     strip.text = element_text(size = 10)
   )
 
-ggsave("uic_facet_plot.png", width = 12, height = 8)
+ggsave("../output/uic_facet_plot.png", width = 12, height = 8)
 ```
 
 
