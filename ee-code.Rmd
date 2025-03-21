@@ -1,0 +1,496 @@
+---
+title: "Soil Texture Analysis"
+author: "Ivan (Jia Sheng) Ee"
+output: html_document
+date: "2024-11-07"
+---
+
+```{r install-packages}
+install.packages("tidyverse")
+```
+
+```{r library}
+library("readxl")
+library("tidyverse")
+```
+
+```{r data-import}
+Soils <- read_excel("Soil_data.xlsx")
+wss_data <- read_excel("wss_data_table_for_crocus_2024.xlsx")
+
+tibble(wss_data)
+```
+
+```{r fixing-variables}
+tidy_soils <- Soils %>% 
+  mutate(core_depth = case_when(
+    core_depth == "45585.0" ~ "10-20",
+    TRUE ~ core_depth
+  ))
+
+wss_data <- wss_data %>% 
+  mutate(core_depth = case_when(
+    core_depth == "45585.0" ~ "10-20",
+    TRUE ~ core_depth
+  ))
+
+```
+
+look at tidy soils dataset
+
+```{r}
+tidy_soils 
+tidy_soils %>% 
+  write_csv("crocus-urban-soil-survey-v1.csv")
+```
+
+
+
+```{r filtering-soils}
+neiu_soils <- tidy_soils %>% filter(core_name == "neiu")
+wss_neiu <- wss_data %>% filter(core_name == "neiu")
+
+csu_soils <- tidy_soils %>% filter(core_name =="csu")
+wss_csu <- wss_data %>% filter(core_name == "csu")
+
+uic_soils <- tidy_soils %>% filter(core_name == "uic")
+wss_uic <- wss_data %>% filter(core_name == "uic")
+```
+
+
+
+```{r general-soils-graph}
+tidy_soils %>% 
+  ggplot(aes(y = obs_texture, fill = core_name)) +
+  geom_bar() +
+  theme_classic()
+```
+
+
+
+# NEIU Visualization
+
+```{r visualizing NEIU core}
+soil_long_neiu <- pivot_longer(neiu_soils, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+soil_long_neiu <- soil_long_neiu %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+soil_long_neiu <- soil_long_neiu %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = soil_long_neiu, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "NEIU Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_wrap(~core_no.) + 
+  coord_flip() +
+  theme_bw()
+```
+
+
+
+
+
+
+```{r WSS and OBS Combined Comparison}
+#Filtering and combining tables
+
+#Sorting obs texture percentages
+obs_neiu <- pivot_longer(neiu_soils, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+                
+
+#Sorting wss texture percentages
+wss_neiu <- pivot_longer(wss_neiu, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+wss1_neiu <- wss_neiu %>% filter(core_no. == "wss1")
+
+#Combining Textures into one table      
+neiu_testing_tbl_combined <- bind_rows(obs_neiu, wss1_neiu)
+
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+neiu_testing_tbl_combined <- neiu_testing_tbl_combined %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+# Rename the soil components
+neiu_testing_tbl_combined <- neiu_testing_tbl_combined %>%
+  mutate(Component = str_replace(Component, "obs_", ""))
+
+# Reorder components (if necessary)
+neiu_testing_tbl_combined <- neiu_testing_tbl_combined %>%
+  mutate(Component = factor(Component, levels = c("sand_pct", "silt_pct", "clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = neiu_testing_tbl_combined, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 100)) +
+  scale_fill_manual(values = c("silt_pct" = "#a67c52", "sand_pct" = "#d9bf77", "clay_pct" = "#845422")) +
+  labs(title = "NEIU testing graph Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no.) + 
+  coord_flip() +
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 20),
+    strip.text = element_text(size = 10)
+  )
+
+ggsave("neiu_facet_plot.png", width = 12, height = 8)
+```
+
+
+```{r wss_csu core}
+wss_long_neiu <- pivot_longer(wss_neiu, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+wss_long_neiu <- wss_long_neiu %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+wss_long_neiu <- wss_long_neiu %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = wss_long_neiu, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "NEIU WSS Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no.) + 
+  coord_flip() +
+  theme_bw()
+```
+
+
+
+
+
+## CSU Section
+
+```{r visualizing CSU core}
+obs_csu <- pivot_longer(csu_soils, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+#Sorting wss texture percentages
+wss_csu <- pivot_longer(wss_csu, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+orthents_csu <- wss_csu %>% filter(core_no. == "wss1")
+
+bryce_csu <- wss_csu %>% filter(core_no. == "wss3")
+
+#Combining Textures into one table      
+csu_tbl_combined <- bind_rows(obs_csu, orthents_csu, bryce_csu)
+
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+csu_tbl_combined <- csu_tbl_combined %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+csu_tbl_combined <- csu_tbl_combined %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = csu_tbl_combined, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 100)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "CSU Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no.) + 
+  coord_flip() +
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 20),
+    strip.text = element_text(size = 10)
+  )
+
+ggsave("csu_facet_plot.png", width = 12, height = 8)
+```
+
+
+
+```{r wss_csu core}
+wss_long_csu <- pivot_longer(wss_csu, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+wss_long_csu <- wss_long_csu %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+wss_long_csu <- wss_long_csu %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = wss_long_csu, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "CSU WSS Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no.) + 
+  coord_flip() +
+  theme_bw()
+```
+
+
+
+
+
+
+## UIC GH Section
+
+```{r visualizing UIC GH core}
+soil_long_uic <- pivot_longer(uic_soils, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+soil_long_uic <- soil_long_uic %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+soil_long_uic <- soil_long_uic %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = soil_long_uic, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "UIC Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no., ) + 
+  coord_flip() +
+  theme_bw()
+
+ggsave("uic_facet_plot.png", width = 12, height = 8)
+```
+
+```{r wss_uic core}
+wss_long_uic <- pivot_longer(wss_uic, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+wss_long_uic <- wss_long_uic %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+wss_long_uic <- wss_long_uic %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+# Plot the stacked bar chart
+ggplot(data = wss_long_uic, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "UIC WSS Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no.) + 
+  coord_flip() +
+  theme_bw()
+```
+
+```{r visualizing CSU core}
+obs_uic <- pivot_longer(uic_soils, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+#Sorting wss texture percentages
+wss_uic <- pivot_longer(wss_uic, cols = c(obs_silt_pct, obs_sand_pct, obs_clay_pct), 
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+orthents1_uic <- wss_uic %>% filter(core_no. == "wss (Loam)")
+
+orthents2_uic <- wss_uic %>% filter(core_no. == "wss (Silt Clay)")
+
+#Combining Textures into one table      
+uic_tbl_combined <- bind_rows(obs_uic, orthents1_uic, orthents2_uic)
+
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+uic_tbl_combined <- uic_tbl_combined %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+#Reorder particle sizes (sand, silt, clay)
+uic_tbl_combined <- uic_tbl_combined %>% 
+  mutate(Component = factor(Component, levels = c("obs_sand_pct",
+                                                  "obs_silt_pct",
+                                                  "obs_clay_pct")))
+
+
+# Plot the stacked bar chart
+ggplot(data = uic_tbl_combined, aes(x = core_depth, y = Percentage, fill = Component)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(breaks = seq(0, 100, by = 100)) +
+  scale_fill_manual(values = c("obs_silt_pct" = "#a67c52", "obs_sand_pct" = "#d9bf77", "obs_clay_pct" = "#845422")) +
+  labs(title = "UIC Soils by Depth", 
+       x = "Depth", 
+       y = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_grid(~core_no.) + 
+  coord_flip() +
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size = 20),
+    strip.text = element_text(size = 10)
+  )
+
+ggsave("uic_facet_plot.png", width = 12, height = 8)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Visiting correlation between the wss and cores 
+
+
+```{r NEIU correlation plots}
+
+corr_plot <- neiu_soils %>% 
+  select(obs_sand_pct, obs_silt_pct, obs_clay_pct, core_depth, core_no.) %>% 
+  pivot_longer(cols = c(obs_sand_pct, obs_silt_pct, obs_clay_pct),
+                          names_to = "Component", 
+                          values_to = "Percentage") 
+
+corr_plot2 <- neiu_soils %>% 
+  select(wss1_sand_pct, wss1_silt_pct, wss1_clay_pct, core_depth, core_no.) %>% 
+  pivot_longer(cols = c(wss1_sand_pct, wss1_silt_pct, wss1_clay_pct),
+                           names_to = "Component",
+                           values_to = "Percentage")
+
+corr_plot3 <- neiu_soils %>% 
+  select(wss2_sand_pct, wss2_silt_pct, wss2_clay_pct, core_depth, core_no.) %>% 
+  pivot_longer(cols = c(wss2_sand_pct, wss2_silt_pct, wss2_clay_pct),
+                           names_to = "Component",
+                           values_to = "Percentage")
+
+
+combined_tbl <- bind_rows(corr_plot, corr_plot2, corr_plot3)
+
+
+
+# Filter only for obs_sand_pct and wss1_sand_pct etc. 
+filtered_tbl <- combined_tbl %>%
+  filter(Component %in% c("obs_sand_pct", "wss1_sand_pct", "wss2_sand_pct"))
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+filtered_tbl <- filtered_tbl %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+
+ggplot(filtered_tbl, aes(Percentage, core_depth, color = Component)) + 
+  geom_point() + 
+  labs(title = "NEIU Sands Correlation", 
+       y = "Depth", 
+       x = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_wrap(~core_no.) +
+  theme_bw()
+
+```
+
+```{r NEIU correlation plots silt}
+# Filter only for obs_silt_pct and wss1_silt_pct etc.
+filtered_tbl <- combined_tbl %>%
+  filter(Component %in% c("obs_silt_pct", "wss1_silt_pct", "wss2_silt_pct"))
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+filtered_tbl <- filtered_tbl %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+
+ggplot(filtered_tbl, aes(Percentage, core_depth, color = Component)) + 
+  geom_point() + 
+  labs(title = "NEIU Silts Correlation", 
+       y = "Depth", 
+       x = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_wrap(~core_no.) +
+  theme_bw()
+
+```
+
+```{r NEIU correlation plots clay}
+# Filter only for obs_sand_pct and wss1_sand_pct etc, 
+filtered_tbl <- combined_tbl %>%
+  filter(Component %in% c("obs_clay_pct", "wss1_clay_pct", "wss2_clay_pct"))
+
+# Reorder core_depth to ensure correct order (e.g., descending)
+filtered_tbl <- filtered_tbl %>%
+  mutate(core_depth = factor(core_depth, levels = rev(unique(core_depth))))
+
+
+ggplot(filtered_tbl, aes(Percentage, core_depth, color = Component)) + 
+  geom_point() + 
+  labs(title = "NEIU Clays Correlation", 
+       y = "Depth", 
+       x = "Percentage (%)", 
+       fill = "Soil Component") +
+      facet_wrap(~core_no.) +
+  theme_bw()
+
+```
