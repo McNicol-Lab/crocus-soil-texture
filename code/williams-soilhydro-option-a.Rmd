@@ -1,0 +1,255 @@
+---
+title: "williams-soilhydro-option-a"
+output: html_document
+date: "2024-11-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+list.files()
+# install.packages('soilDB', dependencies = TRUE)
+# install.packages("readr")
+library(tidyverse)
+library(soilDB)
+```
+
+```{r}
+testdata <- read_csv("data/TESTSoil_data - Sheet1.csv")
+```
+
+Creating a tibble for the first layer `neiu	1	0-10`
+
+```{r trying shamyas model}
+test <- tibble(
+  sand = c(0),
+  silt = c(86.4),
+  clay = c(13.6)
+)
+test
+```
+
+Create variable names vector for `neiu	1	0-10`
+
+```{r trying shamyas model}
+vars <- c("sand", "silt", "clay")
+vars
+```
+
+```{r try-manual-rosetta-function}
+test1 <- ROSETTA(test, vars, v = "3")
+test1
+```
+
+## Trying Gavin's Option A
+
+```{r bones-of-option-a}
+# option A
+testdata %>% 
+  mutate(new_variable = function(existing_var, ...))
+```
+
+```{r}
+optiona <- testdata %>%
+  mutate(rosetta_vars = ROSETTA(., vars = c("sand_percent", "silt_percent", "clay_percent"), v = "3"))
+```
+I think it worked!
+
+## FROM GAVIN: Great job! Within the `ROSETTA()` function, I don't think you need `x`, because you're already working within testdata, for "vars" you want to specify 'sand', 'silt', 'clay'. I tried that but it was still giving more output than is necessary. I thin we can simply input testdata as 'x'.
+
+```{r simpler-version}
+ROSETTA(testdata, vars = c("sand_percent", "silt_percent", "clay_percent"), v = "3")
+```
+
+## Gavin again:: Yay I think it worked!
+
+## important to note that "test1" is actually just neiu 0-10... im not sure if everything I want is included tho (gives rosetta_vars as data.frame 1x 17)... also not sure if the info in the new column is just a repeat of row 1 ???
+
+```{r inspecting?}
+optiona$"rosetta_vars"
+```
+## has two sets of theta r, theta s, alpha, and n par...
+
+```{r}
+optiona
+```
+
+```{r}
+soildata <- read_csv("Soil_data - Data Sheet.csv")
+soildata
+```
+
+```{r}
+soildata2 <- ROSETTA(soildata, vars = c("obs_sand_pct", "obs_silt_pct", "obs_clay_pct"), v = "3")
+soildata2
+```
+
+
+```{r neiu data graphs, fig.height=5, fig.width=5}
+neiu_graph <- soildata2 %>% 
+  filter(core_name == "neiu") %>% 
+  mutate(depth_increment = as.numeric(substr(core_depth, 1, 1))) %>% 
+    ggplot(aes(x = -depth_increment*10-5, y = ksat, color = core_no., shape = core_no.)) +
+  geom_line() +
+  geom_point(size = 2) +   
+  scale_color_manual(values = c(`1` = "maroon", `2` = "darkmagenta", `3` = "deeppink1")) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(-100, 0)) +
+  scale_y_continuous(limits = c(0.75, 3.25)) + 
+  labs(title = "Hyrdaulic Conductivity Comparisons by Depth, NEIU", x = "Depth, cm", y = "Hydraulic Conductivity, cm/day") +
+  coord_flip()
+neiu_graph
+```
+
+```{r csu graph, fig.height=5, fig.width=5}
+csu_graph <- soildata2 %>% 
+  filter(core_name == "csu") %>% 
+  mutate(depth_increment = as.numeric(substr(core_depth, 1, 1))) %>% 
+    ggplot(aes(x = -depth_increment*10-5, y = ksat, color = core_no., shape = core_no.)) +
+  geom_line() +
+  geom_point(size = 2) + 
+  scale_color_manual(values = c(`1` = "coral", `trees` = "brown"), 
+                     labels = c("1", "2")) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(-100, 0)) +
+  scale_y_continuous(limits = c(0.75, 3.25)) +
+  labs(title = "Hyrdaulic Conductivity Comparisons by Depth, CSU", x = "Depth, cm", y = "Hydraulic Conductivity, cm/day") +
+  coord_flip()
+csu_graph
+```
+
+```{r uic data graphs, fig.height=6, fig.width=6}
+uic_graph <- soildata2 %>% 
+  filter(core_name == "uic") %>% 
+  mutate(depth_increment = as.numeric(substr(core_depth, 1, 1))) %>% 
+    ggplot(aes(x = -depth_increment*10-5, y = ksat, color = core_no., shape = core_no.)) +
+  geom_line() +
+  geom_point(size = 2) + 
+  scale_color_manual(values = c(`GH Ne` = "purple", `GH Pr` = "mediumorchid1", `GH Sw` = "plum2", `GH Veg` = "palevioletred")) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(-100, 0)) +
+  labs(title = "Hyrdaulic Conductivity Comparisons by Depth, UIC Greenhouse", x = "Depth, cm", y = "Hydraulic Conductivity, cm/day") +
+  coord_flip()
+uic_graph
+```
+
+```{###r combined graphs NOT USING}
+combined_data <- soildata2 %>%
+  filter(core_name %in% c("neiu", "csu", "uic")) %>%
+  mutate(depth_increment = as.numeric(substr(core_depth, 1, 1)))
+
+final_plot <- ggplot(combined_data, aes(x = -depth_increment*10-5, y = ksat, color = core_name)) +
+  geom_line() + 
+  scale_color_manual(values = c("neiu" = "red", "csu" = "blue", "uic" = "green")) +  
+  scale_x_continuous(limits = c(-100, 0)) +
+  labs(title = "Hydraulic Conductivity Comparisons by Depth",
+       x = "Depth, cm",
+       y = "Hydraulic Conductivity, cm/day",
+       color = "Core Sites") +
+  coord_flip()
+
+final_plot
+```
+
+```{r tidying for theta graphs}
+neiu_soildata <- soildata2 %>% filter(core_name == "neiu")
+neiu_soildata
+
+csu_soildata <- soildata2 %>% filter(core_name == "csu")
+csu_soildata
+
+uic_soildata <- soildata2 %>% filter(core_name == "uic")
+uic_soildata
+```
+
+
+```{r soil capacity and residual graphs}
+neiu_soildata_long <- neiu_soildata %>% 
+  pivot_longer(cols = c(theta_r, theta_s), 
+                          names_to = "theta", 
+                          values_to = "value") 
+neiu_soildata_long
+
+
+neiu_soil_cr <- neiu_soildata_long %>% 
+  filter(core_name == "neiu") %>% 
+  mutate(theta = fct_rev(theta), 
+         core_depth = fct_rev(core_depth)) %>% 
+    ggplot(aes(x = core_depth, y = value*100, fill = theta)) +
+  geom_bar(stat = "identity", width = 0.5) +  
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("theta_r" = "deepskyblue4", "theta_s" = "deepskyblue1"), 
+                    labels = c("Soil Capacity", "Soil Residual")) +
+  labs(title = "Volumetric Soil Water Capacity and Residual by Depth, NEIU",
+       x = "Depth, cm",
+       y = " Volumetric Water Capacity and Residual, %",
+       fill = "Legend") +  
+  facet_wrap(~core_no., ncol = 3) +
+  theme_minimal() +
+  coord_flip()
+
+neiu_soil_cr
+```
+
+```{r soil capacity and residual graphs csu}
+csu_soildata_long <- csu_soildata %>% 
+  pivot_longer(cols = c(theta_r, theta_s), 
+                          names_to = "theta", 
+                          values_to = "value") 
+csu_soildata_long
+
+
+csu_soil_cr <- csu_soildata_long %>% 
+  filter(core_name == "csu") %>% 
+  mutate(theta = fct_rev(theta), 
+         core_depth = fct_rev(core_depth)) %>% 
+    ggplot(aes(x = core_depth, y = value*100, fill = theta)) +
+  geom_bar(stat = "identity", width = 0.5) +  
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("theta_r" = "deepskyblue4", "theta_s" = "deepskyblue1"), 
+                    labels = c("Soil Capacity", "Soil Residual")) +
+  labs(title = "Volumetric Soil Water Capacity and Residual by Depth, CSU",
+       x = "Depth, cm",
+       y = " Volumetric Water Capacity and Residual, %",
+       fill = "Legend") +  
+  facet_wrap(~core_no., ncol = 3) +
+  theme_minimal() +
+  coord_flip()
+
+csu_soil_cr
+```
+
+```{r soil capacity and residual graphs uic}
+uic_soildata_long <- uic_soildata %>% 
+  pivot_longer(cols = c(theta_r, theta_s), 
+                          names_to = "theta", 
+                          values_to = "value") 
+uic_soildata_long
+
+
+uic_soil_cr <- uic_soildata_long %>% 
+  filter(core_name == "uic") %>% 
+  mutate(theta = fct_rev(theta), 
+         core_depth = fct_rev(core_depth)) %>% 
+    ggplot(aes(x = core_depth, y = value*100, fill = theta)) +
+  geom_bar(stat = "identity", width = 0.5) +  
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_fill_manual(values = c("theta_r" = "deepskyblue4", "theta_s" = "deepskyblue1"), 
+                    labels = c("Soil Capacity", "Soil Residual")) +
+  labs(title = "Volumetric Soil Water Capacity and Residual by Depth, UIC",
+       x = "Depth, cm",
+       y = " Volumetric Water Capacity and Residual, %",
+       fill = "Legend") +  
+  facet_wrap(~core_no., ncol = 4) +
+  theme_minimal() +
+  coord_flip()
+
+uic_soil_cr
+```
+
+
+
+
+
