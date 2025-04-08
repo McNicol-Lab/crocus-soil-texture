@@ -6,7 +6,7 @@ date: "2024-11-07"
 ---
 
 ```{r install-packages}
-install.packages("tidyverse")
+# install.packages("tidyverse")
 ```
 
 ```{r library}
